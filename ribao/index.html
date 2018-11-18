@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no"/>
+    <title></title>
+    <script src="js/mui.min.js"></script>
+    <link href="css/mui.min.css" rel="stylesheet"/>
+    <style type="text/css">
+    	#leftMenu{
+    		background-image: url(img/leftBackGround.jpg);
+    		background-repeat: no-repeat;
+			background-size:100% 100%;
+			background-attachment: fixed;
+			padding: 2em;
+			font-size: 20px;
+			color: white;
+    	}
+    </style>
+    <script type="text/javascript" src="js/vue.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+        mui.init();
+
+
+        window.onload = function () {
+            //添加滑动事件
+            mui(".mui-scroll-wrapper").scroll();
+            //添加点击按钮打开菜单
+            mui('.mui-bar-nav').on('tap', '.mui-pull-left', function () {
+                mui('.mui-off-canvas-wrap').offCanvas().toggle();
+            });
+        }
+
+    </script>
+</head>
+<body>
+
+<!-- 侧滑导航根容器 -->
+<div id="content" class="mui-off-canvas-wrap mui-draggable">
+    <!-- 主页面容器 -->
+    <div class="mui-inner-wrap">
+        <!-- 菜单容器 -->
+        <aside class="mui-off-canvas-left">
+            <div class="mui-scroll-wrapper" id="leftMenu">
+                <div class="mui-scroll">
+                	版本信息
+                	<br />
+                	<br />
+                	知乎日报个人定制版<br />
+                	当前版本：1.0<br />
+                	框架：Mui<br />
+                	作者：罗毅
+                </div>
+            </div>
+        </aside>
+        <!-- 主页面标题 -->
+        <header class="mui-bar mui-bar-nav">
+            <a class="mui-icon mui-action-menu mui-icon-bars mui-pull-left"></a>
+            <h1 class="mui-title">知乎日报</h1>
+        </header>
+        <!-- 主页面内容容器 -->
+        <div class="mui-content mui-scroll-wrapper">
+            <div class="mui-scroll">
+            	
+                <!-- 主界面具体展示内容 -->
+                <div id="slider" class="mui-slider">
+                    <div class="mui-slider-group mui-slider-loop">
+
+                        <!-- 额外增加的一个节点(循环轮播：第一个节点是最后一张轮播) -->
+                        <div class="mui-slider-item mui-slider-item-duplicate" v-if="newsImg.length >0">
+                            <a href="#">
+                                <img :src="newsImg[newsImg.length - 1].image">
+                                <p class="mui-slider-title">{{newsImg[newsImg.length - 1].title}}</p>
+                            </a>
+                        </div>
+
+                        <!-- 第一张 -->
+                        <div class="mui-slider-item" v-for="img in newsImg" @tap="openNewsByList(img.id)">
+                            <a href="#">
+                                <img :src="img.image">
+                                <p class="mui-slider-title">{{img.title}}</p>
+                            </a>
+                        </div>
+
+                        <!-- 额外增加的一个节点(循环轮播：最后一个节点是第一张轮播) -->
+                        <div class="mui-slider-item mui-slider-item-duplicate" v-if="newsImg.length >0">
+                            <a href="#">
+                                <img :src="newsImg[0].image">
+                                <p class="mui-slider-title">{{newsImg[0].title}}</p>
+                            </a>
+                        </div>
+
+                    </div>
+
+                    <div class="mui-slider-indicator">
+                        <div class="mui-indicator mui-active" v-for="(img,index) in newsImg" v-if="index==0"></div>
+                        <div class="mui-indicator" v-for="(img,index) in newsImg" v-if="index!=0"></div>
+                    </div>
+                    
+                </div>
+                
+                
+                
+                <ul class="mui-table-view mui-grid-view">
+				    <li class="mui-table-view-cell mui-media mui-col-xs-6" v-for="news in newsList" v-if="newsList.length > 0"
+				    	@tap="openNewsByList(news.id)">
+				        <a href="#">
+				            <img class="mui-media-object" :src="news.image">
+				            <div class="mui-media-body">{{ news.title }}</div>
+				        </a>
+				    </li>
+				</ul>
+                
+                
+                <div v-for="newsList in beforeNewsList">
+                	<ul class="mui-table-view">
+                		<li class="mui-table-view-cell" style="background-color: #DDDDDD;">{{ newsList.newsDate }}</li>	
+                	</ul>
+	                <ul class="mui-table-view mui-grid-view">
+					    <li class="mui-table-view-cell mui-media mui-col-xs-6" v-for="news in newsList.stories" @tap="openNewsByList(news.id)">
+					        <a href="#">
+					            <img class="mui-media-object" :src="news.images">
+					            <div class="mui-media-body">{{ news.title }}</div>
+					        </a>
+					    </li>
+					</ul>
+                </div>
+                
+                <ul class="mui-table-view" id="long_comments" @tap="getNewsListByDate">
+	                <li class="mui-table-view-cell" style="color: #AAAAAA; text-align: center;background-color: #F7F7F7;">
+				    	查看更多往期内容
+				    </li>
+			    </ul>
+			    
+                
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var vm = new Vue({
+        el: "#content",
+        data: {
+            newsList: [],
+            newsImg: [],
+            nowDateTheData: "",
+            beforeNewsList: []
+        },
+        created: function () {
+        	//获取最新一期的新闻
+            fetch('https://news-at.zhihu.com/api/4/news/latest')
+            .then(response => response.json())
+            .then((data) => {
+                for(theNew of data.top_stories)
+            	{
+	                this.newsImg.push({
+	                    id: theNew.id,
+	                    image: theNew.image,
+	                    title: theNew.title
+	                });
+	        	}
+            	
+            	for(theList of data.stories)
+            	{
+	                this.newsList.push({
+	                    id: theList.id,
+	                    image: theList.images,
+	                    title: theList.title
+	                });
+	        	}
+            	
+            	//获取到现在日期数据的时间
+            	vm.nowDateTheData = new Date();
+            	
+	        })
+	        .then(() => {
+                //获得slider插件对象.
+                var gallery = mui('.mui-slider');
+	            gallery.slider({
+                interval: 5000//自动轮播周期，若为0则不自动播放，默认为0；
+	            });
+            	
+	        });
+        },
+        methods: {
+        	//打开新闻
+        	openNewsByList: function(id) {
+        		mui.openWindow({
+        			url: "theNew.html",
+        			id: id,
+        			extras:{
+        				newId: id
+        			},
+        			waiting:{
+				      autoShow:true,//自动显示等待框，默认为true
+				      title:'正在加载...',//等待对话框上显示的提示内容
+				    }
+        		});
+        	},
+        	//时间
+        	getNewsListByDate: function() {
+				var now = this.nowDateTheData;
+				//now.setDate(now.getDate() - 1);
+				var year = now.getFullYear();
+				var months = now.getMonth()+1;
+				var days = now.getDate();
+				
+				var url = year + "" + months + "" + days;
+				fetch("https://news-at.zhihu.com/api/4/news/before/" + url)
+				.then(resp => resp.json())
+				.then((data) => {
+					//时间设置到前一期
+					now.setDate(now.getDate() - 1);
+					//设置到vue里
+					this.nowDateTheData = now;
+					//再获取一次
+					year = now.getFullYear();
+					months = now.getMonth()+1;
+					days = now.getDate();
+					
+					this.beforeNewsList.push({
+						newsDate: year + "-" + months + "-" + days,
+						stories: data.stories
+					});
+					
+					//提示消息
+					mui.toast("已加载" + year + "-" + months + "-" + days + "日的新闻");
+				});
+        	}
+        }
+        
+    });
+</script>
+</body>
+</html>

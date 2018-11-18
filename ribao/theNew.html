@@ -1,0 +1,231 @@
+<!doctype html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link href="css/mui.min.css" rel="stylesheet" />
+		<style>
+			#content{
+				padding: 3em 1em;
+				background-color: white;
+			}
+			#content p {
+				font-size: 105%;
+				color: #6D6D72;
+			}
+			#content h2 {
+				font-size: 110%;
+			}
+			img {
+				max-width: 100%;
+			}
+			#long_comments_info {
+				position: fixed;
+				bottom: 0px;
+				left: 0px;
+				right: 0px;
+				font-size: 18px;
+				padding-bottom: 5px;
+			}
+			.commentsInfo {
+				padding: 1em;
+				line-height: 20px;
+			}
+		</style>
+		<script src="js/vue.min.js"></script>
+	</head>
+
+	<body>
+		<div id="app">
+			<style :src="css"></style>
+			<header class="mui-bar mui-bar-nav" @tap="goTop">
+	            <a class="mui-icon mui-action-menu mui-icon-arrowleft mui-pull-left"></a>
+	            <h1 class="mui-title">{{ title }}</h1>
+	        </header> 
+	        <div id="content" v-html="content">
+	        	
+	        </div>
+	        
+	        <!--评论-->
+            <ul class="mui-table-view" id="long_comments_info">
+            	<li class="mui-table-view-cell" style="color: #007AFF;">
+            		<span class="mui-icon mui-icon-arrowup"></span>&nbsp;赞 {{ commentsInfo.popularity }}&nbsp;&nbsp;
+            		<span @click="goToComments"><span class="mui-icon mui-icon-chat"></span>&nbsp;评论 {{ commentsInfo.comments }}</span>
+            	</li>
+            </ul>
+            
+			<ul class="mui-table-view" id="long_comments">
+				<li class="mui-table-view-cell" style="background-color: #DDDDDD;">精彩评论</li>
+			    <li class="commentsInfo" v-for="comm in comments" v-if="comments.length > 0">
+			        <img class="mui-media-object mui-pull-left" :src="comm.avatar">
+				    {{ comm.author }}<br />时间: {{ comm.time }}<br /><br />
+				    <p>{{ comm.content }}</p>
+				    <hr />
+			    </li>
+			    
+			    <li class="mui-table-view-cell" style="color: #AAAAAA; text-align: center;background-color: #F7F7F7;"
+			    	v-if="commentsInfo.long_comments == 0">
+			    	暂时没有精彩评论，请稍后再试
+			    </li>
+			    
+			    <li class="mui-table-view-cell" style="background-color: #DDDDDD;" v-if="short_comments.length > 0">所有评论</li>
+			    <li class="commentsInfo" v-for="comm in short_comments" v-if="short_comments.length > 0">
+			        <img class="mui-media-object mui-pull-left" :src="comm.avatar">
+				    {{ comm.author }}<br />时间: {{ comm.time }}<br /><br />
+				    <p>{{ comm.content }}
+				    <span v-if="comm.reply_to != null"><br>//{{ comm.reply_to.author }}:{{ comm.reply_to.content }}</span>
+				    </p>
+				    <hr />
+			    </li>
+			    
+			    <div class="mui-button-row" v-if="commentsInfo.short_comments != 0 && short_comments.length == 0">
+			    	<button type="button" class="mui-btn mui-btn-outlined mui-btn-outlined"
+			    	style="margin: 1em; width: 80%;" @tap="getShortComm">查看更多评论</button>
+			    </div>
+			</ul>
+			
+		</div>
+		
+		
+		<script src="js/mui.min.js"></script>
+		<script type="text/javascript">
+			mui.init({
+				swipeBack:true //启用右滑关闭功能
+			})
+			
+			
+			var vm = new Vue({
+				el: "#app",
+				data: {
+					title: '知乎日报',
+					content: '',
+					css: '',
+					newId: '',
+					commentsInfo: {
+						//long_comments : 长评论总数
+						long_comments: 0,
+						//popularity : 点赞总数
+						popularity: 0,
+						//short_comments : 短评论总数
+						short_comments: 0,
+						//comments : 评论总数
+						comments: 0,
+					},
+					comments: [],
+					short_comments: []
+				},
+				methods: {
+					//到评论区
+					goToComments: function() {
+						//location.href = "#long_comments";
+						document.body.scrollTop = document.querySelector("#long_comments").offsetTop;
+						//提示消息
+						mui.toast("点击标题可回到顶部");
+					},
+					goTop: function(){
+						document.body.scrollTop = 0;
+					},
+					unToDate : function(timestamp) {	//时间戳转换函数
+				        var date = new Date(timestamp * 1000);//时间戳为10位需*1000，时间戳为13位的话不需乘1000
+				        var Y = date.getFullYear() + '-';
+				        var M = (date.getMonth()+1 < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1) + '-';
+				        var D = date.getDate() + ' ';
+				        var h = date.getHours() + ':';
+				        var m = date.getMinutes() + ':';
+				        var s = date.getSeconds();
+				        return Y+M+D+h+m+s;
+				   },
+				   getShortComm: function(){
+				   		//获取短评论
+				   		//alert(this.newId);
+				   		fetch("https://news-at.zhihu.com/api/4/story/" + this.newId + "/short-comments")
+				   		.then(resp => resp.json())
+				   		.then((data) => {
+				   			for (shortComm of data.comments) {
+				   				this.short_comments.push({
+				   					author: shortComm.author,
+									content: shortComm.content,
+									avatar: shortComm.avatar,
+									reply_to: shortComm.reply_to || null,
+									time: this.unToDate(shortComm.time)
+				   				});
+				   				
+				   			}
+				   		});
+				   		//提示消息
+						mui.toast("已加载所有评论");
+				   }
+				},
+				created: function() {
+					mui.plusReady(function(){
+						var wb = plus.webview.currentWebview();
+						var url = 'https://news-at.zhihu.com/api/4/news/' + wb.newId;
+						vm.newId = wb.newId;
+						//获取新闻主体
+						fetch(url)
+						.then(resp => resp.json())
+						.then((data) => {
+							//过滤
+							var content = data.body;
+							content = content.replace(/<(script)[\S\s]*?\1>|<\/?(a|div)[^>]*>/gi, "");
+							content = content.replace("查看知乎讨论", "");
+							vm.content = content;
+							vm.css = data.css;
+							vm.title = data.title;
+						});
+						//获取长评论详情
+						fetch("https://news-at.zhihu.com/api/4/story-extra/" + wb.newId)
+						.then(resp => resp.json())
+						.then((data) => {
+							vm.commentsInfo.long_comments = data.long_comments;
+							vm.commentsInfo.popularity = data.popularity;
+							vm.commentsInfo.short_comments = data.short_comments;
+							vm.commentsInfo.comments = data.comments;
+						});
+						//获取长评论内容
+						fetch("https://news-at.zhihu.com/api/4/story/" + wb.newId + "/long-comments")
+						.then(resp => resp.json())
+						.then((data) => {
+							//长评论内容
+							for (var comm of data.comments){
+								vm.comments.push({
+									author: comm.author,
+									content: comm.content,
+									avatar: comm.avatar,
+									time: vm.unToDate(comm.time)
+								});
+							}
+							
+						});
+					});
+				}
+			});
+			
+			window.onload = function(){
+				mui('.mui-bar').on('tap', '.mui-pull-left', function(){
+					//返回
+					mui.back();
+				});
+				
+				
+				
+			}
+			
+			window.onscroll= function(){
+                //变量t是滚动条滚动时，距离顶部的距离
+                var t = document.documentElement.scrollTop||document.body.scrollTop;
+                var p = document.querySelector("#long_comments").offsetTop;
+                
+                if (t >= (p-800)) {
+                	document.querySelector("#long_comments_info").style.display = 'none';
+                } else {
+                	document.querySelector("#long_comments_info").style.display = 'block';
+                }
+//              console.log("当前位置" + t + ",元素位置" + p);
+            }
+		</script>
+	</body>
+
+</html>
